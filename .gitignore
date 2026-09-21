@@ -1,0 +1,30 @@
+# Rails
+backend/.env
+backend/.env.*
+backend/config/master.key
+backend/log/*.log
+backend/tmp/*
+!backend/tmp/.keep
+backend/storage/*
+!backend/storage/.keep
+backend/.byebug_history
+
+# React / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local
+frontend/.env
+frontend/.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
