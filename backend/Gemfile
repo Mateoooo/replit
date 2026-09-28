@@ -51,4 +51,5 @@ group :development, :test do
   gem "bcrypt"
   gem "json", "< 2.10"
   gem "rack-cors"
+  gem "jwt"
 end

@@ -1,34 +1,57 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./AuthContext";
-import { LoginPage } from "./LoginPage";
-import { RegisterPage } from "./RegisterPage";
-import { DashboardPage } from "./DashboardPage";
+import { Provider } from "react-redux";
+import { store, useDispatch } from "./services/store";
+import { checkUserAuth } from "./services/slices/user";
+import { ProtectedRoute } from "./components/protected-route";
+import { LoginPage } from "./pages/login-page";
+import { RegisterPage } from "./pages/register-page";
+import { DashboardPage } from "./pages/dashboard-page";
 
-function Protected({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <p style={{ padding: 24 }}>Загрузка...</p>;
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+function AppRoutes() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(checkUserAuth());
+  }, [dispatch]);
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <ProtectedRoute onlyUnAuth>
+            <LoginPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <ProtectedRoute onlyUnAuth>
+            <RegisterPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
+    <Provider store={store}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/"
-            element={
-              <Protected>
-                <DashboardPage />
-              </Protected>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
-    </AuthProvider>
+    </Provider>
   );
 }

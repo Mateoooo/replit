@@ -1,0 +1,89 @@
+@import url("https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
+
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root,
+[data-theme="light"] {
+  --color-text: #253017;
+  --color-caption: #69735d;
+  --color-text-disabled: #9ca197;
+  --color-toggle: #b2b9a9;
+  --color-disabled: #e4e8df;
+  --color-card: #fff;
+  --color-input: #f2f3ee;
+  --color-button-pressed: #508826;
+  --color-text-link: #508826;
+  --color-accent: #abd27a;
+  --color-text-on-accent: #253017;
+  --color-button-hover: #deebc5;
+  --color-background: #f9faf7;
+  --color-header: #f9faf7;
+  --color-border: #e4e8df;
+  --color-overlay: rgb(0 0 0 / 5%);
+  --color-modal-overlay: rgb(0 0 0 / 40%);
+  --color-alarm: #e0796e;
+  --color-error: #bf3920;
+}
+
+[data-theme="dark"] {
+  --color-background: #101314;
+  --color-header: #151819;
+  --color-card: #1d2220;
+  --color-input: #252b28;
+  --color-border: #39413c;
+
+  --color-text: #f5f7f2;
+  --color-caption: #b8c2b9;
+  --color-text-disabled: #7d887f;
+  --color-toggle: #667268;
+  --color-disabled: #303733;
+
+  --color-accent: #a9dc72;
+  --color-text-on-accent: #101314;
+  --color-button-hover: #b8e982;
+  --color-button-pressed: #85b455;
+  --color-text-link: #b8e982;
+
+  --color-overlay: rgb(0 0 0 / 40%);
+  --color-modal-overlay: rgb(0 0 0 / 65%);
+  --color-alarm: #f0a399;
+  --color-error: #e0796e;
+}
+
+body {
+  color: var(--color-text);
+  font-family: Roboto, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  background-color: var(--color-background);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+input,
+textarea,
+select {
+  background-color: var(--color-input);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
