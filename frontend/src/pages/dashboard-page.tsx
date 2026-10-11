@@ -1,106 +1,26 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "../services/store";
 import { logoutUser } from "../services/slices/user";
-import { userDataSelector } from "../services/selectors";
+import {
+  fetchProjects,
+  startProject,
+  stopProject,
+  clearActionError,
+} from "../services/slices/projects";
+import {
+  actionErrorSelector,
+  projectsErrorSelector,
+  projectsLoadedSelector,
+  projectsSelector,
+  userDataSelector,
+} from "../services/selectors";
+import type { Project } from "../services/types";
+import { formatDateTime } from "../services/utils/format";
 import { PageHeader } from "../components/page-header";
+import { StatusBadge } from "../components/status-badge";
 import { Button } from "../shared/ui/Button";
 import { Illustration } from "../components/illustration";
-
-// Типы — заведём здесь пока, потом вынесем в services/slices/projects
-type ProjectStatus = "running" | "stopped" | "failed" | "created";
-
-type Project = {
-  id: number;
-  name: string;
-  status: ProjectStatus;
-  lastRunAt: string | null;
-  createdAt: string;
-};
-
-// Мок-данные — потом заменим на реальный запрос к /api/projects
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: 1,
-    name: "Rails Quest",
-    status: "running",
-    lastRunAt: "2 минуты назад",
-    createdAt: "12.09.2026",
-  },
-  {
-    id: 2,
-    name: "Blog API",
-    status: "stopped",
-    lastRunAt: "вчера, 18:30",
-    createdAt: "10.09.2026",
-  },
-  {
-    id: 3,
-    name: "Todo List",
-    status: "failed",
-    lastRunAt: "3 дня назад",
-    createdAt: "08.09.2026",
-  },
-];
-
-// Конфиг для бейджа статуса
-const STATUS_CONFIG: Record<
-  ProjectStatus,
-  { label: string; dot: string; text: string; bg: string }
-> = {
-  running: {
-    label: "Запущен",
-    dot: "#22c55e",
-    text: "#166534",
-    bg: "#dcfce7",
-  },
-  stopped: {
-    label: "Остановлен",
-    dot: "#94a3b8",
-    text: "#475569",
-    bg: "#f1f5f9",
-  },
-  failed: {
-    label: "Ошибка",
-    dot: "#ef4444",
-    text: "#991b1b",
-    bg: "#fee2e2",
-  },
-  created: {
-    label: "Создан",
-    dot: "#3b82f6",
-    text: "#1e40af",
-    bg: "#dbeafe",
-  },
-};
-
-function StatusBadge({ status }: { status: ProjectStatus }) {
-  const config = STATUS_CONFIG[status];
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-        padding: "4px 10px",
-        borderRadius: "999px",
-        fontSize: "12px",
-        fontWeight: 500,
-        backgroundColor: config.bg,
-        color: config.text,
-      }}
-    >
-      <span
-        style={{
-          width: "8px",
-          height: "8px",
-          borderRadius: "50%",
-          backgroundColor: config.dot,
-        }}
-      />
-      {config.label}
-    </span>
-  );
-}
 
 function ProjectCard({
   project,
@@ -114,9 +34,10 @@ function ProjectCard({
   const isRunning = project.status === "running";
 
   return (
-    <div className="bg-(--color-card) rounded-xl shadow-sm p-6 flex flex-col gap-4 min-h-62.5 max-w-95 justify-center"
-    style={{ padding: "15px" }}>
-      {/* Название + статус */}
+    <div
+      className="bg-(--color-card) rounded-xl shadow-sm p-6 flex flex-col gap-4 min-h-62.5 max-w-95 justify-center"
+      style={{ padding: "15px" }}
+    >
       <div className="flex items-start justify-between gap-4">
         <h3 className="font-jost font-medium text-xl text-(--color-text) wrap-break-word">
           {project.name}
@@ -124,26 +45,16 @@ function ProjectCard({
         <StatusBadge status={project.status} />
       </div>
 
-      {/* Метаданные */}
       <div className="text-sm text-(--color-caption) flex flex-col gap-1">
-        <span>Последний запуск: {project.lastRunAt ?? "—"}</span>
-        <span>Создан: {project.createdAt}</span>
+        <span>Последний запуск: {formatDateTime(project.lastRunAt)}</span>
+        <span>Создан: {formatDateTime(project.createdAt)}</span>
       </div>
 
-      {/* Кнопки — прижаты к низу карточки */}
       <div className="mt-auto flex gap-3">
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={onOpen}
-        >
+        <Button variant="secondary" className="flex-1" onClick={onOpen}>
           Открыть
         </Button>
-        <Button
-          variant="primary"
-          className="flex-1"
-          onClick={onToggleRun}
-        >
+        <Button variant="primary" className="flex-1" onClick={onToggleRun}>
           {isRunning ? "Остановить" : "Запустить"}
         </Button>
       </div>
@@ -188,30 +99,32 @@ export function DashboardPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector(userDataSelector);
+  const projects = useSelector(projectsSelector);
+  const loaded = useSelector(projectsLoadedSelector);
+  const loadError = useSelector(projectsErrorSelector);
+  const actionError = useSelector(actionErrorSelector);
 
-  // Пока — мок. Потом заменим на useSelector из среза projects
-  const projects = MOCK_PROJECTS;
+  // Загружаем и обновляем список каждые 5 секунд (статусы меняются сами)
+  useEffect(() => {
+    dispatch(clearActionError());
+    dispatch(fetchProjects());
+    const timer = window.setInterval(() => dispatch(fetchProjects()), 5000);
+    return () => window.clearInterval(timer);
+  }, [dispatch]);
 
-  const handleLogout = () => {
-    dispatch(logoutUser());
-  };
-
-  const handleCreate = () => {
-    navigate("/projects/new");
-  };
-
-  const handleOpen = (id: number) => {
-    navigate(`/projects/${id}`);
-  };
-
-  const handleToggleRun = (id: number) => {
-    // TODO: dispatch(runProject(id)) или stopProject(id)
-    console.log("toggle run for project", id);
+  const handleLogout = () => dispatch(logoutUser());
+  const handleCreate = () => navigate("/projects/new");
+  const handleOpen = (id: number) => navigate(`/projects/${id}`);
+  const handleToggleRun = (project: Project) => {
+    dispatch(
+      project.status === "running"
+        ? stopProject(project.id)
+        : startProject(project.id)
+    );
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-(--color-background)">
-      {/* Шапка с кнопкой «Выйти» */}
       <PageHeader
         rightSlot={
           <div className="flex items-center gap-4">
@@ -226,10 +139,17 @@ export function DashboardPage() {
       />
 
       <div className="flex-1 px-4 pt-4 pb-8 sm:px-6" style={{ padding: "16px" }}>
-        <div className="w-full max-w-[1700px] mx-auto">
-          {/* Пустое состояние или сетка карточек */}
-          {projects.length === 0 ? (
-            <div className="bg-(--color-card) rounded-xl shadow-sm p-10 flex flex-col items-center text-center">
+        <div className="w-full max-w-[1700px] mx-auto flex flex-col gap-4">
+          {(actionError || loadError) && (
+            <p className="text-sm text-(--color-error)" role="alert">
+              {actionError ?? loadError}
+            </p>
+          )}
+
+          {!loaded ? (
+            <p className="text-(--color-caption)">Загрузка проектов...</p>
+          ) : projects.length === 0 ? (
+            <div className="bg-(--color-card) rounded-xl shadow-sm p-10 flex flex-col items-center text-center" style={{ padding: 40 }}>
               <Illustration />
               <h2 className="text-h2 font-jost text-(--color-text) mt-6">
                 Проектов пока нет
@@ -238,11 +158,7 @@ export function DashboardPage() {
                 Загрузите ZIP с Rails-проектом, и мы запустим его в
                 изолированном контейнере
               </p>
-              <Button
-                variant="primary"
-                className="mt-8"
-                onClick={handleCreate}
-              >
+              <Button variant="primary" className="mt-8" onClick={handleCreate}>
                 + Создать первый проект
               </Button>
             </div>
@@ -253,7 +169,7 @@ export function DashboardPage() {
                   key={project.id}
                   project={project}
                   onOpen={() => handleOpen(project.id)}
-                  onToggleRun={() => handleToggleRun(project.id)}
+                  onToggleRun={() => handleToggleRun(project)}
                 />
               ))}
               <CreateProjectCard onClick={handleCreate} />

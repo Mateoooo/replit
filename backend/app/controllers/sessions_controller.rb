@@ -1,61 +1,31 @@
 class SessionsController < ApplicationController
-  def create
-    user = User.find_by(email: params[:email])
+  include TokenIssuing
 
-    if user&.authenticate(params[:password])
-      tokens = generate_tokens(user)
-      user.update!(refresh_token: tokens[:refreshToken])
-      render json: { user: user_json(user), **tokens }
+  def create
+    email = params[:email].to_s.strip.downcase
+    user = User.find_by(email: email)
+
+    if user&.authenticate(params[:password].to_s)
+      render json: { user: user_json(user), **issue_tokens_for(user) }
     else
       render json: { error: "Неверный email или пароль" }, status: :unauthorized
     end
   end
 
+  # POST /auth/token — обмен refresh-токена на новый access-токен
   def refresh
-    payload = JsonWebToken.decode(params[:token])
+    record = RefreshToken.find_active_by_raw(params[:token])
 
-    if payload && payload[:type] == "refresh"
-      user = User.find_by(id: payload[:user_id], refresh_token: params[:token])
-
-      if user
-        new_access = JsonWebToken.encode(
-          { user_id: user.id, type: "access" },
-          15.minutes.from_now
-        )
-        return render json: { accessToken: new_access }
-      end
+    if record
+      render json: { accessToken: JsonWebToken.access_for(record.user) }
+    else
+      render json: { error: "Невалидный refresh токен" }, status: :unauthorized
     end
-
-    render json: { error: "Невалидный refresh токен" }, status: :unauthorized
   end
 
+  # Работает и с просроченным токеном (раньше в этом случае токен оставался в БД)
   def destroy
-    payload = JsonWebToken.decode(params[:token])
-
-    if payload
-      user = User.find_by(id: payload[:user_id])
-      user&.update(refresh_token: nil)
-    end
-
+    RefreshToken.revoke_by_raw(params[:token])
     render json: { ok: true }
-  end
-
-  private
-
-  def generate_tokens(user)
-    {
-      accessToken: JsonWebToken.encode(
-        { user_id: user.id, type: "access" },
-        15.minutes.from_now
-      ),
-      refreshToken: JsonWebToken.encode(
-        { user_id: user.id, type: "refresh" },
-        30.days.from_now
-      )
-    }
-  end
-
-  def user_json(user)
-    { id: user.id, email: user.email }
   end
 end

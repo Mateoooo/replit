@@ -5,10 +5,12 @@ import {
   type TypedUseSelectorHook,
 } from "react-redux";
 import userReducer from "./slices/user";
+import projectsReducer from "./slices/projects";
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
+    projects: projectsReducer,
   },
 });
 
