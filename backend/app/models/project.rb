@@ -1,5 +1,4 @@
 class Project < ApplicationRecord
-  # Виртуальный атрибут: загруженный zip (ActionDispatch::Http::UploadedFile)
   attr_accessor :archive_upload
 
   enum :status, { created: "created", running: "running", stopped: "stopped", failed: "failed" },
@@ -26,10 +25,9 @@ class Project < ApplicationRecord
     runs.active.order(:id).first
   end
 
-  # Для списков используем уже загруженные runs (без N+1)
   def last_run
     if runs.loaded?
-      runs.max_by { |r| [ r.created_at, r.id ] }
+      runs.max_by { |r| [r.created_at, r.id] }
     else
       runs.order(created_at: :desc, id: :desc).first
     end
@@ -40,7 +38,6 @@ class Project < ApplicationRecord
     run && (run.started_at || run.created_at)
   end
 
-  # Статус проекта выводится из последнего запуска
   def refresh_status!
     update_column(:status, derive_status)
   end

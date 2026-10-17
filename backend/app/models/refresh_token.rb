@@ -13,7 +13,6 @@ class RefreshToken < ApplicationRecord
     Digest::SHA256.hexdigest(raw.to_s)
   end
 
-  # Возвращает [запись, сырой_токен]. Сырой токен в БД не хранится — только SHA256.
   def self.issue_for(user, user_agent: nil)
     user.refresh_tokens.stale.delete_all
     raw = SecureRandom.urlsafe_base64(48)
@@ -23,7 +22,7 @@ class RefreshToken < ApplicationRecord
       expires_at: LIFETIME.from_now,
       user_agent: user_agent.to_s.truncate(255).presence
     )
-    [ record, raw ]
+    [record, raw]
   end
 
   def self.find_active_by_raw(raw)
