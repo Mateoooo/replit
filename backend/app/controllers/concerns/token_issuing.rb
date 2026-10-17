@@ -1,4 +1,3 @@
-# Общий код для SessionsController и UsersController (раньше был скопирован в обоих).
 module TokenIssuing
   extend ActiveSupport::Concern
 

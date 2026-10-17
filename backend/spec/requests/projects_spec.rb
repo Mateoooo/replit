@@ -96,7 +96,7 @@ RSpec.describe "Проекты", type: :request do
         get "/projects", headers: headers
 
         expect(response).to have_http_status(:ok)
-        expect(json["projects"].map { |p| p["name"] }).to eq(["Мой"])
+        expect(json["projects"].map { |p| p["name"] }).to eq([ "Мой" ])
       end
     end
   end
@@ -195,7 +195,7 @@ RSpec.describe "Проекты", type: :request do
 
         get "/projects/#{project.id}/runs", headers: headers
 
-        expect(json["runs"].map { |r| r["id"] }).to eq([second.id, first.id])
+        expect(json["runs"].map { |r| r["id"] }).to eq([ second.id, first.id ])
       end
     end
   end

@@ -30,14 +30,12 @@ class Run < ApplicationRecord
             started_at: Time.current)
   end
 
-  # Адрес, по которому запущенное приложение студента открывается в браузере
   def preview_url
     return nil unless host_port && running?
 
     "http://#{ENV.fetch('PREVIEW_HOST', 'localhost')}:#{host_port}"
   end
 
-  # Контейнер завершился сам. Если запуск уже остановлен/упал — игнорируем (возвращаем false).
   def complete!(exit_code:)
     with_lock do
       return false unless active?

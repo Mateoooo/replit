@@ -1,7 +1,6 @@
 require "zip"
 require "fileutils"
 
-# Хранение и безопасная распаковка zip-архивов проектов.
 class ProjectArchive
   class Error < StandardError; end
 
@@ -10,7 +9,6 @@ class ProjectArchive
   MAX_ENTRIES       = 20_000
   ROOT = Rails.root.join("storage", "projects")
 
-  # Возвращает текст ошибки или nil, если архив подходит
   def self.validate_upload(upload)
     return "Загрузите zip-архив с проектом" unless upload.respond_to?(:path) && upload.respond_to?(:size)
     return "Архив больше #{MAX_ARCHIVE_SIZE / 1.megabyte} МБ" if upload.size > MAX_ARCHIVE_SIZE
@@ -110,7 +108,6 @@ class ProjectArchive
     raise Error, "Не удалось распаковать архив: #{e.message}"
   end
 
-  # Если внутри архива одна папка с проектом — берём её
   def project_root(target)
     return target if File.exist?(File.join(target, "Gemfile"))
 
@@ -119,9 +116,6 @@ class ProjectArchive
     single && File.directory?(single) ? single : target
   end
 
-  # Rails по умолчанию запрещает показ приложения во фрейме (X-Frame-Options) и
-  # блокирует чужие Host. Платформа показывает проект в iframe, поэтому добавляем
-  # в проект студента маленький initializer, который это разрешает.
   def inject_preview_initializer(root)
     return unless File.exist?(File.join(root, "config", "application.rb"))
 
@@ -147,9 +141,6 @@ class ProjectArchive
     RUBY
   end
 
-  # Платформа всегда использует СВОЙ Dockerfile (Dockerfile.platform): родной Dockerfile
-  # Rails 8 рассчитан на production (порт 80, master.key, yarn.lock) и не подходит для учебного запуска.
-  # Проект собирается в режиме development и слушает порт 3000.
   def write_platform_dockerfile(root)
     version_file = File.join(root, ".ruby-version")
     version = File.exist?(version_file) ? File.read(version_file)[/\d+\.\d+(\.\d+)?/] : nil
@@ -161,7 +152,6 @@ class ProjectArchive
 
     lines = []
     lines << "FROM ruby:#{version}"
-    # Старые образы (Ruby 3.0 и ниже) основаны на EOL-Debian: репозитории переехали в archive.debian.org
     lines << %q{RUN if grep -qE 'buster|stretch' /etc/os-release; then sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g; /-updates/d' /etc/apt/sources.list && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive; fi}
     lines << "RUN apt-get update -qq && apt-get install -y --no-install-recommends #{packages.join(' ')} && rm -rf /var/lib/apt/lists/*"
     lines << "RUN apt-get update -qq && (apt-get install -y --no-install-recommends libvips || true) && rm -rf /var/lib/apt/lists/*"
@@ -172,7 +162,7 @@ class ProjectArchive
     lines << "RUN bundle install"
     lines << "RUN if [ -f yarn.lock ]; then yarn install || true; else npm install || true; fi" if js
     lines << "ENV RAILS_ENV=development"
-    # собирает JS/CSS (Tailwind, cssbundling, jsbundling, sprockets, propshaft) — иначе сайт без стилей
+    
     lines << "RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile || true"
     lines << "EXPOSE #{DockerRunner::APP_PORT}"
     lines << 'CMD ["sh", "-c", "rm -f tmp/pids/server.pid && (bundle exec rails db:prepare || bundle exec rails db:create db:migrate) && bundle exec rails server -b 0.0.0.0 -p 3000"]'

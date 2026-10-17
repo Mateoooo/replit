@@ -1,4 +1,4 @@
-# Используется ТОЛЬКО для access-токенов. Refresh-токены — непрозрачные, хранятся в БД (RefreshToken).
+# для access-токенов
 class JsonWebToken
   SECRET = Rails.application.secret_key_base
   ACCESS_TTL = 15.minutes
@@ -16,7 +16,7 @@ class JsonWebToken
   def self.decode(token)
     decoded = JWT.decode(token, SECRET, true, algorithm: "HS256").first
     HashWithIndifferentAccess.new(decoded)
-  rescue JWT::DecodeError # включает ExpiredSignature и nil-токен
+  rescue JWT::DecodeError 
     nil
   end
 end

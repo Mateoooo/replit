@@ -12,7 +12,6 @@ class SessionsController < ApplicationController
     end
   end
 
-  # POST /auth/token — обмен refresh-токена на новый access-токен
   def refresh
     record = RefreshToken.find_active_by_raw(params[:token])
 
@@ -23,7 +22,6 @@ class SessionsController < ApplicationController
     end
   end
 
-  # Работает и с просроченным токеном (раньше в этом случае токен оставался в БД)
   def destroy
     RefreshToken.revoke_by_raw(params[:token])
     render json: { ok: true }

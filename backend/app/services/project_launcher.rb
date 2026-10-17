@@ -8,7 +8,6 @@ class ProjectLauncher
     @archive = archive
   end
 
-  # Быстрая часть (вызывается из контроллера): создаёт Run и ставит задачу в очередь
   def enqueue(project)
     raise AlreadyRunning, "Проект уже запущен" if project.active_run
 
@@ -19,7 +18,6 @@ class ProjectLauncher
     raise AlreadyRunning, "Проект уже запущен"
   end
 
-  # Тяжёлая часть (вызывается из LaunchRunJob). Блокируется, пока работает контейнер.
   def perform(run)
     return unless run.pending?
 
@@ -33,7 +31,6 @@ class ProjectLauncher
     build_output = @runner.build(tag, context)
     build_output.each_line { |line| log(run, line.chomp) }
 
-    # Пользователь мог нажать «Остановить» во время сборки
     return unless run.reload.pending?
 
     container_id = @runner.run(tag, name: "rails-run-#{run.id}")

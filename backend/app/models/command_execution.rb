@@ -15,7 +15,7 @@ class CommandExecution < ApplicationRecord
   validates :command, presence: true, length: { maximum: MAX_COMMAND_LENGTH }
   validate :run_must_be_running, on: :create
 
-  # Выполняет команду в контейнере запуска и сохраняет результат.
+  # выполняет команду в контейнере запуска и сохраняет результат
   def execute!(runner: DockerRunner.new)
     update!(status: "running", started_at: Time.current)
     result = runner.exec(run.container_id, command)

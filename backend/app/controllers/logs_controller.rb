@@ -1,6 +1,3 @@
-# Вариант 1: polling.
-# GET /runs/:run_id/logs?after_id=123   — «всё, что новее id» (надёжнее)
-# GET /runs/:run_id/logs?since=<ISO8601 с микросекундами> — «всё, что новее timestamp»
 class LogsController < ApplicationController
   before_action :authenticate_user!
 

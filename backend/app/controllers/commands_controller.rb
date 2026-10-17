@@ -7,8 +7,6 @@ class CommandsController < ApplicationController
     render json: { commands: commands.map(&:api_json) }
   end
 
-  # POST /runs/:run_id/commands  { "command": "bundle exec rails routes" }
-  # Выполняется синхронно (таймаут 30 сек.) и возвращает результат.
   def create
     execution = @run.command_executions.new(command: params[:command], user: current_user)
 

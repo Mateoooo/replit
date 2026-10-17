@@ -11,7 +11,6 @@ class ProjectsController < ApplicationController
     render json: { project: @project.api_json }
   end
 
-  # POST /projects (multipart/form-data: name, archive)
   def create
     project = current_user.projects.new(name: params[:name], archive_upload: params[:archive])
 

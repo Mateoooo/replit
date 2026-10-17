@@ -29,7 +29,7 @@ class Project < ApplicationRecord
   # Для списков используем уже загруженные runs (без N+1)
   def last_run
     if runs.loaded?
-      runs.max_by { |r| [r.created_at, r.id] }
+      runs.max_by { |r| [ r.created_at, r.id ] }
     else
       runs.order(created_at: :desc, id: :desc).first
     end

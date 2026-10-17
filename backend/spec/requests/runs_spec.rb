@@ -37,7 +37,7 @@ RSpec.describe "Запуски, логи и консоль", type: :request do
 
   describe "GET /runs/:id/logs" do
     let!(:logs) do
-      [1, 2, 3].map { |i| run.log_entries.create!(content: "line #{i}", logged_at: (4 - i).minutes.ago) }
+      [ 1, 2, 3 ].map { |i| run.log_entries.create!(content: "line #{i}", logged_at: (4 - i).minutes.ago) }
     end
 
     context "при первом запросе (happy path)" do
@@ -45,7 +45,7 @@ RSpec.describe "Запуски, логи и консоль", type: :request do
         get "/runs/#{run.id}/logs?after_id=0", headers: headers
 
         expect(response).to have_http_status(:ok)
-        expect(json["logs"].map { |l| l["content"] }).to eq(["line 1", "line 2", "line 3"])
+        expect(json["logs"].map { |l| l["content"] }).to eq([ "line 1", "line 2", "line 3" ])
         expect(json["lastId"]).to eq(logs.last.id)
         expect(json["runStatus"]).to eq("running")
       end
@@ -55,7 +55,7 @@ RSpec.describe "Запуски, логи и консоль", type: :request do
       it "after_id возвращает только новое" do
         get "/runs/#{run.id}/logs?after_id=#{logs[1].id}", headers: headers
 
-        expect(json["logs"].map { |l| l["content"] }).to eq(["line 3"])
+        expect(json["logs"].map { |l| l["content"] }).to eq([ "line 3" ])
       end
 
       it "когда нечего возвращать — пустой список без ошибки" do
@@ -70,7 +70,7 @@ RSpec.describe "Запуски, логи и консоль", type: :request do
 
         get "/runs/#{run.id}/logs?since=#{CGI.escape(since)}", headers: headers
 
-        expect(json["logs"].map { |l| l["content"] }).to eq(["line 3"])
+        expect(json["logs"].map { |l| l["content"] }).to eq([ "line 3" ])
       end
 
       it "since с мусором даёт 422" do
@@ -117,7 +117,7 @@ RSpec.describe "Запуски, логи и консоль", type: :request do
         expect(json["command"]["output"]).to eq("Gemfile\n")
 
         get "/runs/#{run.id}/commands", headers: headers
-        expect(json["commands"].map { |c| c["command"] }).to eq(["ls"])
+        expect(json["commands"].map { |c| c["command"] }).to eq([ "ls" ])
       end
     end
 
