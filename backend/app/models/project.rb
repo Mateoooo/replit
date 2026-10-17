@@ -27,7 +27,7 @@ class Project < ApplicationRecord
 
   def last_run
     if runs.loaded?
-      runs.max_by { |r| [r.created_at, r.id] }
+      runs.max_by { |r| [ r.created_at, r.id ] }
     else
       runs.order(created_at: :desc, id: :desc).first
     end

@@ -11,9 +11,9 @@ class DockerRunner
   DOCKER_MISSING = "Docker не найден. Установите/запустите Docker Desktop и перезапустите сервер.".freeze
 
   def build(tag, context_dir)
-    args = ["docker", "build", "-t", tag]
+    args = [ "docker", "build", "-t", tag ]
     platform_file = File.join(context_dir.to_s, "Dockerfile.platform")
-    args += ["-f", platform_file] if File.exist?(platform_file)
+    args += [ "-f", platform_file ] if File.exist?(platform_file)
     out, status = capture2e(*args, context_dir.to_s)
     raise Error, "Ошибка сборки образа:\n#{out.lines.last(30).join}" unless status.success?
 
@@ -107,8 +107,8 @@ class DockerRunner
 
   def parse_line(line)
     stamp, text = line.chomp.split(" ", 2)
-    [Time.iso8601(stamp), text.to_s]
+    [ Time.iso8601(stamp), text.to_s ]
   rescue ArgumentError
-    [Time.current, line.chomp]
+    [ Time.current, line.chomp ]
   end
 end

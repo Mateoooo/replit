@@ -22,7 +22,7 @@ class RefreshToken < ApplicationRecord
       expires_at: LIFETIME.from_now,
       user_agent: user_agent.to_s.truncate(255).presence
     )
-    [record, raw]
+    [ record, raw ]
   end
 
   def self.find_active_by_raw(raw)

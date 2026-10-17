@@ -152,7 +152,7 @@ class ProjectArchive
 
     lines = []
     lines << "FROM ruby:#{version}"
-    lines << %q{RUN if grep -qE 'buster|stretch' /etc/os-release; then sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g; /-updates/d' /etc/apt/sources.list && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive; fi}
+    lines << %q(RUN if grep -qE 'buster|stretch' /etc/os-release; then sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g; /-updates/d' /etc/apt/sources.list && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive; fi)
     lines << "RUN apt-get update -qq && apt-get install -y --no-install-recommends #{packages.join(' ')} && rm -rf /var/lib/apt/lists/*"
     lines << "RUN apt-get update -qq && (apt-get install -y --no-install-recommends libvips || true) && rm -rf /var/lib/apt/lists/*"
     lines << "RUN npm install -g yarn || true" if js
@@ -162,7 +162,7 @@ class ProjectArchive
     lines << "RUN bundle install"
     lines << "RUN if [ -f yarn.lock ]; then yarn install || true; else npm install || true; fi" if js
     lines << "ENV RAILS_ENV=development"
-    
+
     lines << "RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile || true"
     lines << "EXPOSE #{DockerRunner::APP_PORT}"
     lines << 'CMD ["sh", "-c", "rm -f tmp/pids/server.pid && (bundle exec rails db:prepare || bundle exec rails db:create db:migrate) && bundle exec rails server -b 0.0.0.0 -p 3000"]'
