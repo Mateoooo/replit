@@ -24,6 +24,20 @@ class Run < ApplicationRecord
     ACTIVE_STATUSES.include?(status)
   end
 
+  def claim!
+    self.class.where(id: id, status: "pending", claimed_at: nil).update_all(claimed_at: Time.current) == 1
+  end
+
+  def queued?
+    pending? && claimed_at.nil?
+  end
+
+  def queue_position
+    return nil unless queued?
+
+    self.class.where(status: "pending", claimed_at: nil).where("id <= ?", id).count
+  end
+
   def start!(container_id:, image_tag: nil, host_port: nil)
     update!(status: "running", container_id: container_id,
             image_tag: image_tag || self.image_tag, host_port: host_port,
@@ -81,6 +95,8 @@ class Run < ApplicationRecord
       errorMessage: error_message,
       hostPort: host_port,
       previewUrl: preview_url,
+      queued: queued?,
+      queuePosition: queue_position,
       createdAt: created_at.iso8601
     }
   end

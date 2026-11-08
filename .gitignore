@@ -9,6 +9,8 @@ backend/storage/*
 !backend/storage/.keep
 backend/.byebug_history
 
+backend/stress-zips/
+
 # React / Node
 frontend/node_modules/
 frontend/dist/

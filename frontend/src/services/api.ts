@@ -18,8 +18,6 @@ function checkResponse<T>(res: Response): Promise<T> {
         .then((err) => Promise.reject({ ...err, statusCode: res.status }));
 }
 
-// Заголовки теперь ОБЪЕДИНЯЮТСЯ (раньше options.headers полностью затирал content-type).
-// Для FormData content-type не ставим — браузер сам добавит boundary.
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -49,8 +47,6 @@ async function refreshAccessToken(): Promise<string> {
   return data.accessToken;
 }
 
-// Запрос с авторизацией: токен подставляется автоматически,
-// при 401 обновляем access-токен по refresh и повторяем запрос.
 export async function fetchWithRefresh<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -81,7 +77,6 @@ export async function fetchWithRefresh<T>(
   }
 }
 
-// ---------- Авторизация ----------
 type AuthResponse = { user: any; accessToken: string; refreshToken: string };
 
 export const registerApi = (email: string, password: string) =>
@@ -104,7 +99,7 @@ export const logoutApi = (refreshToken: string) =>
 
 export const getUserApi = () => fetchWithRefresh<{ user: any }>("me");
 
-// ---------- Проекты ----------
+// проекты 
 export const getProjectsApi = () =>
   fetchWithRefresh<{ projects: Project[] }>("projects");
 
@@ -127,7 +122,7 @@ export const startProjectApi = (id: number) =>
 export const stopProjectApi = (id: number) =>
   fetchWithRefresh<{ run: Run }>(`projects/${id}/stop`, { method: "POST" });
 
-// ---------- Запуски, логи, команды ----------
+// запуски, логи, команды 
 export const getRunsApi = (projectId: number) =>
   fetchWithRefresh<{ runs: Run[] }>(`projects/${projectId}/runs`);
 

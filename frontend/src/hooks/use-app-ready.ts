@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-// Контейнер уже запущен, но Rails внутри ещё стартует. Пробуем достучаться до
-// приложения и сообщаем, когда оно начало отвечать (тогда можно показывать iframe).
 export function useAppReady(url: string | null): boolean {
   const [ready, setReady] = useState(false);
 

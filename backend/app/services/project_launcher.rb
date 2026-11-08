@@ -1,4 +1,3 @@
-# Оркестрация запуска проекта: Run -> сборка образа -> контейнер -> сбор логов -> итог.
 class ProjectLauncher
   class AlreadyRunning < StandardError; end
   class NotRunning < StandardError; end
@@ -11,42 +10,34 @@ class ProjectLauncher
   def enqueue(project)
     raise AlreadyRunning, "Проект уже запущен" if project.active_run
 
-    run = project.runs.create!(status: "pending")
-    LaunchRunJob.perform_later(run.id)
-    run
+    project.runs.create!(status: "pending")
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     raise AlreadyRunning, "Проект уже запущен"
   end
 
-  def perform(run)
+  def start(run)
     return unless run.pending?
 
     project = run.project
     tag = "rails-project-#{project.id}-run-#{run.id}"
+    run.update_column(:image_tag, tag) # чтобы образ можно было удалить, даже если сборка упадёт
 
     log(run, "Распаковка архива…")
     context = @archive.prepare_context(project, run)
 
     log(run, "Сборка Docker-образа (первый раз может занять несколько минут)…")
-    build_output = @runner.build(tag, context)
-    build_output.each_line { |line| log(run, line.chomp) }
+    @runner.build(tag, context) { |line| log(run, line) }
 
-    return unless run.reload.pending?
+    unless run.reload.pending?
+      @runner.remove_image(tag)
+      return
+    end
 
     container_id = @runner.run(tag, name: "rails-run-#{run.id}")
-    run.container_id = container_id # чтобы fail_run мог убрать контейнер
+    run.container_id = container_id
     port = @runner.host_port(container_id)
     run.start!(container_id: container_id, image_tag: tag, host_port: port)
     log(run, "Контейнер запущен, приложение доступно на порту #{port}")
-
-    @runner.stream_logs(container_id) do |stream, time, text|
-      run.log_entries.create!(stream: stream, content: text, logged_at: time)
-    end
-
-    exit_code = @runner.wait(container_id)
-    log(run, "Контейнер завершился с кодом #{exit_code}")
-    run.reload.complete!(exit_code: exit_code)
-    @runner.remove(container_id)
   rescue DockerRunner::Error, ProjectArchive::Error => e
     fail_run(run, e.message)
   rescue StandardError => e
@@ -60,20 +51,32 @@ class ProjectLauncher
     run = project.active_run
     raise NotRunning, "Проект не запущен" unless run
 
-    @runner.stop(run.container_id) if run.container_id.present?
     run.stop!
+    stop_container(run.container_id)
     run
   end
 
   private
+
+  def stop_container(container_id)
+    return if container_id.blank?
+
+    @runner.stop(container_id)
+  rescue DockerRunner::Error
+    @runner.remove(container_id)
+  end
 
   def log(run, text, stream = "system")
     run.log_entries.create!(stream: stream, content: text)
   end
 
   def fail_run(run, message)
+    container_id = run.container_id
+    image_tag = run.image_tag
+
     log(run, message, "stderr")
     run.reload.fail!(message)
-    @runner.remove(run.container_id) if run.container_id.present?
+    @runner.remove(container_id) if container_id.present?
+    @runner.remove_image(image_tag)
   end
 end

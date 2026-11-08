@@ -10,7 +10,6 @@ export const loginUserErrorSelector = (state: RootState) =>
 export const loginUserRequestSelector = (state: RootState) =>
   state.user.loginUserRequest;
 
-// projects
 export const projectsSelector = (state: RootState) => state.projects.items;
 export const projectsLoadedSelector = (state: RootState) =>
   state.projects.loaded;

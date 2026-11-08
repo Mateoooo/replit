@@ -59,7 +59,12 @@ export function AppPreview({
       </Placeholder>
     );
   } else if (run.status === "pending") {
-    body = (
+    body = run.queued ? (
+      <Spinner
+        title={`В очереди на сборку: №${run.queuePosition ?? 1}`}
+        hint="Одновременно собирается ограниченное число проектов. Сборка начнётся автоматически."
+      />
+    ) : (
       <Spinner
         title="Распаковка и сборка образа…"
         hint="При первом запуске это может занять несколько минут — ход сборки виден в логах справа."

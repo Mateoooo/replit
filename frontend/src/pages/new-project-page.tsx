@@ -44,7 +44,6 @@ export function NewProjectPage() {
       return;
     }
     setFile(f);
-    // название подставляется из имени архива, если не введено
     if (!name.trim()) setName(f.name.replace(/\.zip$/i, ""));
   };
 

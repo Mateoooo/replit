@@ -14,11 +14,6 @@ function merge(prev: LogEntry[], incoming: LogEntry[]): LogEntry[] {
   return [...map.values()].sort((a, b) => a.id - b.id);
 }
 
-/**
- * Логи запуска двумя способами:
- *  - polling:   раз в секунду GET /runs/:id/logs?after_id=<последний id>
- *  - websocket: подписка на RunLogsChannel (ActionCable), новые строки приходят сами
- */
 export function useRunLogs(runId: number | null, mode: LogMode, active: boolean) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [connected, setConnected] = useState(false);
@@ -28,7 +23,7 @@ export function useRunLogs(runId: number | null, mode: LogMode, active: boolean)
     activeRef.current = active;
   }, [active]);
 
-  // ---- Вариант 1: polling ----
+  // polling 
   useEffect(() => {
     if (runId == null || mode !== "polling") return;
 
@@ -47,8 +42,8 @@ export function useRunLogs(runId: number | null, mode: LogMode, active: boolean)
           lastId = data.lastId ?? lastId;
           setLogs((prev) => merge(prev, data.logs));
         }
-        if (data.logs.length >= PAGE) delay = 0; // есть ещё — забираем сразу
-        else if (data.logs.length === 0 && !activeRef.current) return; // запуск завершён, всё прочитано
+        if (data.logs.length >= PAGE) delay = 0; 
+        else if (data.logs.length === 0 && !activeRef.current) return; 
       } catch {
         delay = 3000;
       }
@@ -62,7 +57,7 @@ export function useRunLogs(runId: number | null, mode: LogMode, active: boolean)
     };
   }, [runId, mode]);
 
-  // ---- Вариант 2: WebSocket (ActionCable) ----
+  // WebSocket
   useEffect(() => {
     if (runId == null || mode !== "websocket") return;
 
@@ -71,7 +66,6 @@ export function useRunLogs(runId: number | null, mode: LogMode, active: boolean)
     let closed = false;
     let ws: WebSocket | null = null;
 
-    // Подписались -> догружаем то, что было до подключения
     const loadBacklog = async () => {
       let lastId = 0;
       for (;;) {
@@ -85,7 +79,6 @@ export function useRunLogs(runId: number | null, mode: LogMode, active: boolean)
 
     (async () => {
       try {
-        // дёргаем защищённый эндпоинт: при необходимости обновит access-токен
         await fetchWithRefresh<unknown>("me");
       } catch {
         return;

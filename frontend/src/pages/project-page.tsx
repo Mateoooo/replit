@@ -46,7 +46,7 @@ export function ProjectPage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
 
-  // Проект и список запусков обновляются каждые 2 секунды
+  // проект и список запусков обновляются каждые 2 секунды
   useEffect(() => {
     dispatch(clearActionError());
     let stopped = false;
@@ -56,7 +56,6 @@ export function ProjectPage() {
         const data = await getRunsApi(projectId);
         if (!stopped) setRuns(data.runs);
       } catch {
-        /* следующий тик попробует снова */
       }
     };
     load();
@@ -67,12 +66,10 @@ export function ProjectPage() {
     };
   }, [dispatch, projectId]);
 
-  // Новый активный запуск — сразу показываем его
   useEffect(() => {
     if (project?.activeRunId) setSelectedRunId(project.activeRunId);
   }, [project?.activeRunId]);
 
-  // Иначе — последний запуск
   useEffect(() => {
     if (selectedRunId == null && runs.length > 0) setSelectedRunId(runs[0].id);
   }, [runs, selectedRunId]);

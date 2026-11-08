@@ -22,6 +22,8 @@ export type Run = {
   errorMessage: string | null;
   hostPort: number | null;
   previewUrl: string | null;
+  queued: boolean;
+  queuePosition: number | null;
   createdAt: string;
 };
 

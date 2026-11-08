@@ -1,5 +1,6 @@
 class LogEntry < ApplicationRecord
   STREAMS = %w[stdout stderr system].freeze
+  BROADCAST_LIMIT = 2000
 
   belongs_to :run
 
@@ -15,7 +16,7 @@ class LogEntry < ApplicationRecord
   scope :after_id,   ->(id)   { where("log_entries.id > ?", id) }
   scope :after_time, ->(time) { where("log_entries.logged_at > ?", time) }
 
-  # Вариант 2 (WebSocket): сервер сам пушит новые строки подписчикам
+  # WebSocket
   after_create_commit :broadcast_to_subscribers
 
   def self.channel_for(run_id)
@@ -29,7 +30,8 @@ class LogEntry < ApplicationRecord
   private
 
   def broadcast_to_subscribers
-    ActionCable.server.broadcast(self.class.channel_for(run_id), api_json)
+    payload = api_json.merge(content: content.to_s.truncate(BROADCAST_LIMIT))
+    ActionCable.server.broadcast(self.class.channel_for(run_id), payload)
   rescue StandardError => e
     Rails.logger.warn("LogEntry broadcast failed: #{e.message}")
   end

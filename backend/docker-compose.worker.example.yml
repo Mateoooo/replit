@@ -1,0 +1,18 @@
+services:
+  worker:
+    build: ./backend
+    command: bin/rails platform:worker
+    depends_on: [db]
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@db:5432/backend_production
+      PLATFORM_MAX_BUILDS: "3"          # одновременных сборок
+      PREVIEW_HOST: "192.168.1.10"      # адрес сервера, по которому студенты откроют предпросмотр
+      PREVIEW_BIND: "0.0.0.0"
+    volumes:
+      - storage:/rails/storage                     # архивы: web сохраняет, worker читает — том общий
+      - /var/run/docker.sock:/var/run/docker.sock  # доступ к Docker хоста (в образе нужен docker CLI)
+
+
+volumes:
+  storage:

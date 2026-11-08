@@ -9,7 +9,6 @@ const STREAM_COLOR = {
   system: "#8f9b8a",
 } as const;
 
-// Занимает всю высоту родителя, логи прокручиваются внутри
 export function LogViewer({ runId, active }: { runId: number; active: boolean }) {
   const [mode, setMode] = useState<LogMode>("polling");
   const { logs, connected } = useRunLogs(runId, mode, active);

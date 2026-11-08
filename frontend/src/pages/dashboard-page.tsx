@@ -104,7 +104,7 @@ export function DashboardPage() {
   const loadError = useSelector(projectsErrorSelector);
   const actionError = useSelector(actionErrorSelector);
 
-  // Загружаем и обновляем список каждые 5 секунд (статусы меняются сами)
+  // загружаем и обновляем список каждые 5 секунд (статусы меняются сами)
   useEffect(() => {
     dispatch(clearActionError());
     dispatch(fetchProjects());
@@ -138,8 +138,11 @@ export function DashboardPage() {
         }
       />
 
-      <div className="flex-1 px-4 pt-4 pb-8 sm:px-6" style={{ padding: "16px" }}>
-        <div className="w-full max-w-[1700px] mx-auto flex flex-col gap-4">
+      <div className="flex-1 flex flex-col" style={{ padding: "16px" }}>
+        <div
+          className="w-full flex-1 flex flex-col gap-4"
+          style={{ maxWidth: 1700, marginLeft: "auto", marginRight: "auto" }}
+        >
           {(actionError || loadError) && (
             <p className="text-sm text-(--color-error)" role="alert">
               {actionError ?? loadError}
@@ -149,16 +152,25 @@ export function DashboardPage() {
           {!loaded ? (
             <p className="text-(--color-caption)">Загрузка проектов...</p>
           ) : projects.length === 0 ? (
-            <div className="bg-(--color-card) rounded-xl shadow-sm p-10 flex flex-col items-center text-center" style={{ padding: 40 }}>
+            <div
+              className="bg-(--color-card) rounded-xl shadow-sm flex-1 flex flex-col items-center justify-center text-center gap-4"
+              style={{ padding: 40, minHeight: 420 }}
+            >
               <Illustration />
-              <h2 className="text-h2 font-jost text-(--color-text) mt-6">
+              <h2
+                className="text-(--color-text)"
+                style={{ fontFamily: "Jost, sans-serif", fontWeight: 500, fontSize: 28, marginTop: 16 }}
+              >
                 Проектов пока нет
               </h2>
-              <p className="mt-2 text-(--color-caption) max-w-100">
-                Загрузите ZIP с Rails-проектом, и мы запустим его в
-                изолированном контейнере
+              <p className="text-(--color-caption)" style={{ maxWidth: 440 }}>
+                Загрузите ZIP с Rails-проектом, и мы запустим его в изолированном контейнере
               </p>
-              <Button variant="primary" className="mt-8" onClick={handleCreate}>
+              <Button
+                variant="primary"
+                onClick={handleCreate}
+                style={{ padding: "0 32px", marginTop: 16 }}
+              >
                 + Создать первый проект
               </Button>
             </div>

@@ -27,7 +27,7 @@ class ProjectsController < ApplicationController
     rescue ProjectLauncher::NotRunning
       nil
     end
-    @project.destroy!
+    destroy_with_retry
     render json: { ok: true }
   end
 
@@ -48,6 +48,16 @@ class ProjectsController < ApplicationController
   end
 
   private
+
+  def destroy_with_retry(attempts = 3)
+    @project.destroy!
+  rescue ActiveRecord::InvalidForeignKey, ActiveRecord::Deadlocked
+    attempts -= 1
+    raise if attempts.zero?
+
+    sleep 0.3
+    retry
+  end
 
   def set_project
     @project = current_user.projects.find(params[:id])

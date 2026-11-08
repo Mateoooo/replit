@@ -70,4 +70,39 @@ RSpec.describe Run do
       end
     end
   end
+
+  describe "очередь на сборку" do
+    let(:second_project) { user.projects.create!(name: "Second", archive_path: "storage/projects/2/archive.zip") }
+
+    context "когда запуски ждут воркера" do
+      it "считает позицию в очереди по порядку создания" do
+        first = project.runs.create!(status: "pending")
+        second = second_project.runs.create!(status: "pending")
+
+        expect(first).to be_queued
+        expect([ first.queue_position, second.queue_position ]).to eq([ 1, 2 ])
+      end
+    end
+
+    context "когда воркер занимает запуск" do
+      it "claim! срабатывает один раз и убирает запуск из очереди" do
+        first = project.runs.create!(status: "pending")
+        second = second_project.runs.create!(status: "pending")
+
+        expect(first.claim!).to be(true)
+        expect(first.claim!).to be(false) # второй воркер не может взять тот же запуск
+
+        expect(first.reload).not_to be_queued
+        expect(first.queue_position).to be_nil
+        expect(second.queue_position).to eq(1)
+      end
+
+      it "не занимает запуск, который уже остановлен" do
+        run = project.runs.create!(status: "pending")
+        run.stop!
+
+        expect(run.claim!).to be(false)
+      end
+    end
+  end
 end

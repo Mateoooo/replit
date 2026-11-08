@@ -6,25 +6,41 @@ class DockerRunner
 
   Result = Struct.new(:output, :exit_code)
 
-  APP_PORT = 3000      # порт, на котором слушает Rails внутри контейнера
-  EXEC_TIMEOUT = 30    # секунд
+  APP_PORT = 3000          # порт, на котором слушает Rails внутри контейнера
+  EXEC_TIMEOUT = 30        # секунд
+  BUILD_OUTPUT_KEEP = 200  # сколько последних строк сборки помнить для сообщения об ошибке
   DOCKER_MISSING = "Docker не найден. Установите/запустите Docker Desktop и перезапустите сервер.".freeze
 
+  # cборка образа
   def build(tag, context_dir)
     args = [ "docker", "build", "-t", tag ]
     platform_file = File.join(context_dir.to_s, "Dockerfile.platform")
     args += [ "-f", platform_file ] if File.exist?(platform_file)
-    out, status = capture2e(*args, context_dir.to_s)
-    raise Error, "Ошибка сборки образа:\n#{out.lines.last(30).join}" unless status.success?
+    args << context_dir.to_s
 
-    out
+    tail = []
+    status = nil
+    Open3.popen2e(*args) do |stdin, out, waiter|
+      stdin.close
+      out.each_line do |line|
+        line = line.chomp
+        tail << line
+        tail.shift if tail.size > BUILD_OUTPUT_KEEP
+        yield line if block_given?
+      end
+      status = waiter.value
+    end
+    raise Error, "Ошибка сборки образа:\n#{tail.last(30).join("\n")}" unless status.success?
+
+    tail.join("\n")
+  rescue Errno::ENOENT
+    raise Error, DOCKER_MISSING
   end
 
-  # порт приложения публикуется на случайный свободный порт хоста
   def run(image, name:)
     bind = ENV.fetch("PREVIEW_BIND", "127.0.0.1")
     out, err, status = capture3(
-      "docker", "run", "-d", "--name", name,
+      "docker", "run", "-d", "--init", "--name", name,
       "-p", "#{bind}::#{APP_PORT}",
       "--memory", "512m", "--cpus", "1", "--pids-limit", "256",
       "--security-opt", "no-new-privileges", image
@@ -34,7 +50,6 @@ class DockerRunner
     out.strip
   end
 
-  # возвращает порт хоста, на который проброшен порт приложения
   def host_port(container, container_port = APP_PORT)
     out, err, status = capture3("docker", "port", container, "#{container_port}/tcp")
     raise Error, "Не удалось получить порт контейнера: #{err.strip}" unless status.success?
@@ -46,14 +61,37 @@ class DockerRunner
   end
 
   def stop(container)
-    _out, err, status = capture3("docker", "stop", "-t", "5", container)
+    _out, err, status = capture3("docker", "stop", "-t", "3", container)
     raise Error, "Не удалось остановить контейнер: #{err.strip}" unless status.success?
   end
 
   def remove(container)
+    return if container.blank?
+
     capture3("docker", "rm", "-f", container)
   rescue Error
     nil
+  end
+
+  def remove_image(tag)
+    return if tag.blank?
+
+    capture3("docker", "rmi", tag)
+  rescue Error
+    nil
+  end
+
+  def prune_images
+    capture3("docker", "image", "prune", "-f")
+  rescue Error
+    nil
+  end
+
+  def container_running?(container)
+    out, _err, status = capture3("docker", "inspect", "-f", "{{.State.Running}}", container)
+    status.success? && out.strip == "true"
+  rescue Error
+    false
   end
 
   def wait(container)
@@ -63,12 +101,16 @@ class DockerRunner
     out.strip.to_i
   end
 
-  def stream_logs(container, &block)
-    Open3.popen2e("docker", "logs", "-f", "--timestamps", container) do |stdin, out, thread|
+  def stream_logs(container, since: nil, &block)
+    args = [ "docker", "logs", "-f", "--timestamps" ]
+    args += [ "--since", since ] if since.present?
+    args << container
+
+    Open3.popen2e(*args) do |stdin, out, thread|
       stdin.close
       out.each_line do |line|
-        time, text = parse_line(line)
-        block.call("stdout", time, text)
+        raw, text, time = split_line(line)
+        block.call("stdout", time, text, raw)
       end
       thread.value
     end
@@ -93,22 +135,16 @@ class DockerRunner
 
   private
 
-  def capture2e(*args)
-    Open3.capture2e(*args)
-  rescue Errno::ENOENT
-    raise Error, DOCKER_MISSING
-  end
-
   def capture3(*args)
     Open3.capture3(*args)
   rescue Errno::ENOENT
     raise Error, DOCKER_MISSING
   end
 
-  def parse_line(line)
+  def split_line(line)
     stamp, text = line.chomp.split(" ", 2)
-    [ Time.iso8601(stamp), text.to_s ]
-  rescue ArgumentError
-    [ Time.current, line.chomp ]
+    [ stamp, text.to_s, Time.iso8601(stamp) ]
+  rescue ArgumentError, TypeError
+    [ nil, line.chomp, Time.current ]
   end
 end

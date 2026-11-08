@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_10_000007) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_31_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,9 +76,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_10_000007) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "host_port"
+    t.string "logs_cursor"
+    t.datetime "claimed_at"
     t.index ["project_id", "created_at"], name: "index_runs_on_project_id_and_created_at"
     t.index ["project_id"], name: "index_runs_on_project_id"
     t.index ["project_id"], name: "index_runs_one_active_per_project", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'running'::character varying])::text[]))"
+    t.index ["status"], name: "index_runs_on_status"
   end
 
   create_table "users", force: :cascade do |t|

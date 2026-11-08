@@ -72,6 +72,20 @@ RSpec.describe LogEntry, type: :model do
       end
     end
 
+    context "когда строка очень длинная" do
+      it "в рассылку уходит усечённая копия (лимит PostgreSQL NOTIFY), а в БД — полная" do
+        allow(ActionCable.server).to receive(:broadcast)
+        long_line = "я" * 5000
+
+        entry = run.log_entries.create!(content: long_line)
+
+        expect(ActionCable.server).to have_received(:broadcast) do |_channel, payload|
+          expect(payload[:content].length).to be <= LogEntry::BROADCAST_LIMIT
+        end
+        expect(entry.reload.content.length).to eq(5000)
+      end
+    end
+
     context "когда рассылка падает" do
       it "строка всё равно сохраняется" do
         allow(ActionCable.server).to receive(:broadcast).and_raise(StandardError, "cable down")

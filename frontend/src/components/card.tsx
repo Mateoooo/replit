@@ -1,7 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
 
-// Отступы задаются inline: в global.css стоит `* { margin: 0; padding: 0 }`
-// без @layer, и он перебивает Tailwind-утилиты p-* / m-* (gap-* при этом работает).
 export function Card({
   children,
   className = "",

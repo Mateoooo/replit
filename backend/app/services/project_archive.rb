@@ -45,7 +45,6 @@ class ProjectArchive
     FileUtils.rm_rf(ROOT.join(project.id.to_s))
   end
 
-  # Распаковывает архив запуска и возвращает каталог — контекст для docker build
   def prepare_context(project, run)
     raise Error, "Архив проекта не найден" unless project.archive_path && File.exist?(project.archive_path)
 
@@ -54,7 +53,7 @@ class ProjectArchive
     FileUtils.mkdir_p(target)
     extract(project.archive_path, target)
     root = project_root(target)
-    write_platform_dockerfile(root)
+    PlatformDockerfile.new(root).write
     inject_preview_initializer(root)
     root
   end
@@ -79,7 +78,6 @@ class ProjectArchive
         raise Error, "Символические ссылки в архиве запрещены" if entry.symlink?
 
         dest = File.expand_path(entry.name, target)
-        # защита от zip-slip (../../etc/passwd)
         unless dest == target || dest.start_with?(target + File::SEPARATOR)
           raise Error, "Недопустимый путь в архиве: #{entry.name}"
         end
@@ -122,7 +120,6 @@ class ProjectArchive
     dir = File.join(root, "config", "initializers")
     FileUtils.mkdir_p(dir)
     File.write(File.join(dir, "zz_platform_preview.rb"), <<~RUBY)
-      # Добавлено платформой автоматически: разрешает показ приложения во фрейме.
       class PlatformAllowFraming
         def initialize(app)
           @app = app
@@ -139,34 +136,5 @@ class ProjectArchive
       Rails.application.config.middleware.insert_before 0, PlatformAllowFraming
       Rails.application.config.hosts.clear if Rails.application.config.respond_to?(:hosts)
     RUBY
-  end
-
-  def write_platform_dockerfile(root)
-    version_file = File.join(root, ".ruby-version")
-    version = File.exist?(version_file) ? File.read(version_file)[/\d+\.\d+(\.\d+)?/] : nil
-    version ||= "3.3"
-    js = File.exist?(File.join(root, "package.json"))
-
-    packages = %w[build-essential git curl pkg-config libyaml-dev libpq-dev libsqlite3-dev]
-    packages += %w[nodejs npm] if js
-
-    lines = []
-    lines << "FROM ruby:#{version}"
-    lines << %q(RUN if grep -qE 'buster|stretch' /etc/os-release; then sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g; /-updates/d' /etc/apt/sources.list && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive; fi)
-    lines << "RUN apt-get update -qq && apt-get install -y --no-install-recommends #{packages.join(' ')} && rm -rf /var/lib/apt/lists/*"
-    lines << "RUN apt-get update -qq && (apt-get install -y --no-install-recommends libvips || true) && rm -rf /var/lib/apt/lists/*"
-    lines << "RUN npm install -g yarn || true" if js
-    lines << "RUN gem install bundler -N || true"
-    lines << "WORKDIR /app"
-    lines << "COPY . ."
-    lines << "RUN bundle install"
-    lines << "RUN if [ -f yarn.lock ]; then yarn install || true; else npm install || true; fi" if js
-    lines << "ENV RAILS_ENV=development"
-
-    lines << "RUN SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile || true"
-    lines << "EXPOSE #{DockerRunner::APP_PORT}"
-    lines << 'CMD ["sh", "-c", "rm -f tmp/pids/server.pid && (bundle exec rails db:prepare || bundle exec rails db:create db:migrate) && bundle exec rails server -b 0.0.0.0 -p 3000"]'
-
-    File.write(File.join(root, "Dockerfile.platform"), lines.join("\n") + "\n")
   end
 end

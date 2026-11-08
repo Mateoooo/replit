@@ -11,8 +11,7 @@ RSpec.describe "Проекты", type: :request do
   let(:other_headers) { { "Authorization" => "Bearer #{JsonWebToken.access_for(other)}" } }
   let(:tmpdir) { Dir.mktmpdir("projects-spec") }
 
-  before { ActiveJob::Base.queue_adapter = :test }
-  after  { FileUtils.remove_entry(tmpdir) }
+  after { FileUtils.remove_entry(tmpdir) }
 
   def json
     JSON.parse(response.body)
@@ -139,12 +138,13 @@ RSpec.describe "Проекты", type: :request do
     let!(:project) { create_project }
 
     context "когда проект не запущен (happy path)" do
-      it "создаёт запуск, ставит задачу в очередь и обновляет статус проекта" do
+      it "создаёт запуск в очереди на сборку и обновляет статус проекта" do
         post "/projects/#{project.id}/start", headers: headers
 
         expect(response).to have_http_status(:accepted)
         expect(json["run"]["status"]).to eq("pending")
-        expect(LaunchRunJob).to have_been_enqueued.with(json["run"]["id"])
+        expect(json["run"]["queued"]).to be(true)
+        expect(json["run"]["queuePosition"]).to eq(1)
         expect(project.reload).to be_running
       end
     end
@@ -196,6 +196,27 @@ RSpec.describe "Проекты", type: :request do
         get "/projects/#{project.id}/runs", headers: headers
 
         expect(json["runs"].map { |r| r["id"] }).to eq([ second.id, first.id ])
+      end
+    end
+  end
+
+  describe "DELETE /projects/:id при одновременной работе воркера" do
+    context "когда воркер в этот момент дописывает логи (ошибка внешнего ключа)" do
+      it "повторяет удаление и успешно удаляет проект" do
+        project = create_project
+        attempts = 0
+        allow_any_instance_of(Project).to receive(:destroy!).and_wrap_original do |original, *args|
+          attempts += 1
+          raise ActiveRecord::InvalidForeignKey, "воркер дописывал лог" if attempts == 1
+
+          original.call(*args)
+        end
+
+        delete "/projects/#{project.id}", headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(attempts).to eq(2)
+        expect(Project.exists?(project.id)).to be(false)
       end
     end
   end
